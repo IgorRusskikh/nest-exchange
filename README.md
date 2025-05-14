@@ -26,36 +26,144 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Project setup
+## Prerequisites
+
+Before you begin, ensure you have met the following requirements:
+
+- You have installed a recent LTS version of [Node.js](https://nodejs.org/) (e.g., 18.x or 20.x).
+- You have installed [Yarn](https://yarnpkg.com/) package manager.
+- You have [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/) installed (recommended for managing services like Redis and PostgreSQL).
+- You have [OpenSSL](https://www.openssl.org/) installed (for generating JWT keys).
+
+## Getting Started
+
+Follow these steps to get your development environment set up:
+
+### 1. Clone the Repository
 
 ```bash
-$ yarn install
+git clone <your-repository-url>
+cd nest-exchange
 ```
 
-## Compile and run the project
+### 2. Install Dependencies
 
 ```bash
-# development
-$ yarn run start
-
-# watch mode
-$ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
+yarn install
 ```
 
-## Run tests
+### 3. Configure Environment Variables
+
+This project uses environment variables for configuration. You'll need to create a `.env` file in the root of the project. You can copy `.env.example` if it exists, or create a new one.
+
+Fill it with the necessary values. Key variables include:
+
+- **Application & Server:**
+
+  - `PORT=3000` (Port the application will run on)
+  - `CORS_ORIGIN=http://localhost:3001` (URL of your frontend application)
+  - `NODE_ENV=development`
+
+- **Database (PostgreSQL via Prisma):**
+
+  - `DATABASE_URL="postgresql://user:password@localhost:5432/mydb?schema=public"` (Replace with your actual database connection string)
+
+- **Redis:**
+
+  - `REDIS_URL="redis://localhost:6379"` (For NestJS caching, session storage, etc.)
+  - `RL_REDIS_HOST=localhost` (For Rate Limiter Redis instance)
+  - `RL_REDIS_PORT=6379` (For Rate Limiter Redis instance)
+
+- **JWT Authentication:**
+
+  - `JWT_PRIVATE_KEY_PATH=./keys/private.key` (Path to your JWT private key)
+  - `JWT_PUBLIC_KEY_PATH=./keys/public.key` (Path to your JWT public key)
+  - `JWT_DEFAULT_TOKEN_EXPIRES_IN=15m` (Access token expiration)
+  - `JWT_REFRESH_TOKEN_EXPIRES_IN_SECONDS=604800` (Refresh token expiration, e.g., 7 days)
+  - `JWT_ALGORITHM=RS256`
+
+- **Blockchain Interaction:**
+
+  - `INFURA_RPC_URL=` (Your RPC URL for connecting to the Ethereum network, e.g., from Infura or Alchemy)
+  - `AUTH_DOMAIN=yourapp.com` (Domain used in SIWE messages)
+  - `NONCE_EXPIRATION_SECONDS=300` (Expiration for authentication nonces)
+
+- **Rate Limiter:**
+  - `RL_KEY_PREFIX=rate-limit`
+  - `RL_POINTS=100` (Max requests)
+  - `RL_DURATION=60` (Per 60 seconds)
+  - `RL_BLOCK_DURATION=600` (Block for 600 seconds if limit exceeded)
+
+### 4. Generate JWT Keys
+
+The application uses RSA keys for signing JWTs. You need to generate a private and public key pair.
+
+Create a `keys` directory in the project root if it doesn't exist:
 
 ```bash
-# unit tests
-$ yarn run test
+mkdir keys
+```
 
-# e2e tests
-$ yarn run test:e2e
+Generate the private key:
 
-# test coverage
-$ yarn run test:cov
+```bash
+openssl genpkey -algorithm RSA -out ./keys/private.key -pkeyopt rsa_keygen_bits:2048
+```
+
+Generate the public key from the private key:
+
+```bash
+openssl rsa -pubout -in ./keys/private.key -out ./keys/public.key
+```
+
+Ensure the paths in your `.env` file for `JWT_PRIVATE_KEY_PATH` and `JWT_PUBLIC_KEY_PATH` match where you've saved these keys.
+
+### 5. Set Up the Database (Prisma)
+
+Once your `DATABASE_URL` is configured in the `.env` file and your PostgreSQL server is running (either locally or via Docker), run Prisma migrations to set up the database schema:
+
+```bash
+yarn prisma migrate dev
+```
+
+This command will also generate the Prisma Client.
+
+### 6. Running Services with Docker Compose (Optional but Recommended)
+
+The project includes a `docker-compose.yml` file to easily run dependent services like PostgreSQL and Redis.
+
+To start these services:
+
+```bash
+docker-compose up -d
+```
+
+This will start PostgreSQL and Redis in detached mode. Make sure your `DATABASE_URL` and Redis URLs in the `.env` file match the credentials and ports defined in `docker-compose.yml`.
+
+## Running the Application
+
+Once the setup is complete, you can run the application:
+
+### Development Mode
+
+For development with auto-reload on file changes:
+
+```bash
+yarn run start:dev
+```
+
+The application will be available at `http://localhost:PORT` (e.g., `http://localhost:3000` if `PORT=3000`).
+
+### Production Mode
+
+To build and run the application for production:
+
+```bash
+# 1. Build the application
+yarn run build
+
+# 2. Start the application
+yarn run start:prod
 ```
 
 ## Deployment
