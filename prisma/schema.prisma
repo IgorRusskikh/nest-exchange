@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
+}
+
+model User {
+  address     String  @id @unique
+  displayName String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  orders        Order[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  sessionId String   @unique
+  active    Boolean  @default(true)
+  expiresAt DateTime
+  userId    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [address], onDelete: Cascade)
+
+  @@index([token, sessionId])
+  @@map("refresh_tokens")
+}
+
+model Order {
+  id               String  @id @default(cuid())
+  orderId          String  @unique
+  userId           String
+  buyToken         String
+  sellToken        String
+  buyAmount        Decimal @db.Decimal(60, 18)
+  sellAmount       Decimal @db.Decimal(60, 18)
+  buyAmountFilled  Decimal @default(0) @db.Decimal(60, 18)
+  sellAmountFilled Decimal @default(0) @db.Decimal(60, 18)
+  isMarketOrder    Boolean
+
+  status OrderStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [address], onDelete: Cascade)
+
+  @@index([userId, orderId, buyToken, sellToken])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  ACTIVE
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+}
