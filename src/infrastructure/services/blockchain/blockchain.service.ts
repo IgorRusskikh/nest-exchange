@@ -31,6 +31,12 @@ export class BlockchainService implements OnModuleInit {
 
     console.log('listening...');
 
+    const filter = this.contract.filters.OrderCancelled();
+
+    const logs = await this.contract.queryFilter(filter, 0, 'latest');
+
+    console.log('logs', logs);
+
     this.listenToEvents();
   }
 

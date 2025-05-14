@@ -306,7 +306,6 @@ export class BlockchainUseCase implements OnModuleInit {
         '[Restore Orders] Starting processing of users and orders from fetched blockchain data...',
       );
 
-      // 1. Create/Get Users
       this.logger.log(
         '[Restore Orders] Step 1: Processing users from orders...',
       );
@@ -466,8 +465,10 @@ export class BlockchainUseCase implements OnModuleInit {
                   : false,
 
               status:
-                typedOrderInfo.amountFilledA?.toString() === '0' &&
-                typedOrderInfo.amountFilledB?.toString() === '0'
+                typedOrderInfo.amountFilledA?.toString() ===
+                  typedOrderInfo.amountA?.toString() ||
+                typedOrderInfo.amountFilledB?.toString() ===
+                  typedOrderInfo.amountB?.toString()
                   ? OrderStatus.FILLED
                   : (typedOrderInfo.amountFilledB > 0 &&
                         typedOrderInfo.amountFilledB <
@@ -527,6 +528,45 @@ export class BlockchainUseCase implements OnModuleInit {
       this.logger.log(
         'restoreOrdersHistory process (including user and order persistence) completed successfully.',
       );
+
+      this.logger.log('Starting processing OrderCancelled events');
+      try {
+        const contract = await this.blockchainService.getContract();
+        const filter = contract.filters.OrderCancelled();
+        const logs = await contract.queryFilter(filter, 0, 'latest');
+
+        this.logger.log(`Получено ${logs.length} логов OrderCancelled`);
+
+        for (const log of logs) {
+          try {
+            const orderId = log.data ? BigInt(log.data).toString() : null;
+
+            if (!orderId) {
+              this.logger.warn('Получен лог без orderId, пропускаем');
+              continue;
+            }
+
+            await this.orderService.updateOrderByOrderId(orderId, {
+              status: OrderStatus.CANCELLED,
+            });
+
+            this.logger.log(`Order ${orderId} was cancelled and updated in DB`);
+          } catch (error) {
+            this.logger.error(
+              `Error processing log for order: ${error.message}`,
+            );
+          }
+        }
+
+        this.logger.log(
+          'OrderCancelled logs processing completed successfully.',
+        );
+      } catch (error) {
+        this.logger.error(
+          `Error processing OrderCancelled logs: ${error.message}`,
+          error.stack,
+        );
+      }
     } catch (error) {
       const errorMessage = error.message || error.toString();
       this.logger.error(
