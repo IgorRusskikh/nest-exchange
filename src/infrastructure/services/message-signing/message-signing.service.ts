@@ -12,10 +12,7 @@ export class MessageSigningService {
     @InjectRedis() private readonly redis: Redis,
     private readonly configService: ConfigService,
   ) {
-    this.domain = this.configService.get<string>(
-      'AUTH_DOMAIN',
-      'app.example.com',
-    );
+    this.domain = this.configService.get<string>('AUTH_DOMAIN');
   }
 
   async generateNonce(address: string) {
